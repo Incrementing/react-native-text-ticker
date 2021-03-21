@@ -115,14 +115,21 @@ export default class TextMarquee extends PureComponent {
       childrenChanged = false;
 
       for (i = 0; i < this.props.children.length; i++) {
-        // Match types
+        // Compare types
         if (typeof this.props.children[i] != typeof prevProps.children[i]) {
           childrenChanged = true;
           break;
         }
 
-        // Match length (if .length exists)
+        // Compare length (if .length exists)
         if (typeof this.props.children[i].length == "number" && this.props.children[i].length != prevProps.children[i].length) {
+          childrenChanged = true;
+          break;
+        }
+
+        // Compare content (if comparison by == is possible).
+        // https://developer.mozilla.org/en-US/docs/Glossary/Primitive
+        if (typeof this.props.children[i] != "object" && this.props.children[i] != prevProps.children[i]) {
           childrenChanged = true;
           break;
         }
