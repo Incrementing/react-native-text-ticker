@@ -104,17 +104,31 @@ export default class TextMarquee extends PureComponent {
   componentDidUpdate(prevProps) {
 
     let childrenChanged = this.props.children !== prevProps.children;
-    if (typeof this.props.children == "object" && typeof prevProps.children == "object") {
-      if (this.props.children.length == prevProps.children.length) {
-        childrenChanged = false;
-        for (i = 0; i < this.props.children.length; i++) {
-          if (this.props.children[i] != prevProps.children[i]) {
-            childrenChanged = true
-            break;
-          }
+
+    // Handle children not being a string but a loopable object (e.g. array).
+    // e.g. <TextTicker>Hello <FontAwesomeIcon icon={faGlobe}/></TextTicker> would
+    // make children an array containing ["Hello", <FontAwesomeIcon...].
+    //
+    // TODO: Add other checks?
+    if (typeof this.props.children == typeof prevProps.children && typeof this.props.children.forEach == "function") {
+      // By default assume nothing has changed.
+      childrenChanged = false;
+
+      for (i = 0; i < this.props.children.length; i++) {
+        // Match types
+        if (typeof this.props.children[i] != typeof prevProps.children[i]) {
+          childrenChanged = true;
+          break;
+        }
+
+        // Match length (if .length exists)
+        if (typeof this.props.children[i].length == "number" && this.props.children[i].length != prevProps.children[i].length) {
+          childrenChanged = true;
+          break;
         }
       }
     }
+
 
     if (childrenChanged) {
       this.resetScroll()
@@ -194,7 +208,7 @@ export default class TextMarquee extends PureComponent {
       if (!isNaN(scrollToValue)) {
 
         let childrenLength = children.length;
-        if (typeof children == "object") {
+        if (typeof children != "string" && typeof children.forEach == "function") {
           children.forEach(child => {
             if (!isNaN(child.length)) {
               childrenLength += child.length;
