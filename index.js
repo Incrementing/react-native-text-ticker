@@ -9,9 +9,6 @@ import {
   View,
   findNodeHandle
 } from 'react-native'
-import React, { PureComponent } from 'react'
-
-import PropTypes from 'prop-types'
 
 const { UIManager } = NativeModules
 
@@ -22,39 +19,6 @@ export const TextTickAnimationType = Object.freeze({
 })
 
 export default class TextMarquee extends PureComponent {
-
-  static propTypes = {
-    style: Text.propTypes.style,
-    duration: PropTypes.number,
-    loop: PropTypes.bool,
-    bounce: PropTypes.bool,
-    scroll: PropTypes.bool,
-    marqueeOnMount: PropTypes.bool,
-    marqueeDelay: PropTypes.number,
-    isInteraction: PropTypes.bool,
-    useNativeDriver: PropTypes.bool,
-    onMarqueeComplete: PropTypes.func,
-    onScrollStart: PropTypes.func,
-    children: PropTypes.oneOfType([
-      PropTypes.string,
-      PropTypes.array,
-      PropTypes.node,
-    ]),
-    repeatSpacer: PropTypes.number,
-    easing: PropTypes.func,
-    animationType: PropTypes.oneOf(['auto', 'scroll', 'bounce']), // (values should be from AnimationType, 'auto', 'scroll', 'bounce')
-    bounceSpeed: PropTypes.number, // Will be ignored if you set duration directly.
-    scrollSpeed: PropTypes.number, // Will be ignored if you set duration directly.
-    bouncePadding: PropTypes.shape({
-      left: PropTypes.number,
-      right: PropTypes.number
-    }),
-    bounceDelay: PropTypes.number,
-    shouldAnimateTreshold: PropTypes.number,
-    disabled: PropTypes.bool,
-    isRTL: PropTypes.bool
-  }
-
   static defaultProps = {
     style: {},
     loop: true,
@@ -189,11 +153,11 @@ export default class TextMarquee extends PureComponent {
     return wrappedPromise
   };
 
-  startAnimation = (timeDelay) => {
+  startAnimation = () => {
     if (this.state.animating) {
       return
     }
-    this.start(timeDelay)
+    this.start()
   }
 
   animateScroll = () => {
@@ -225,7 +189,7 @@ export default class TextMarquee extends PureComponent {
 
         Animated.timing(this.animatedValue, {
           toValue: scrollToValue,
-          duration: duration || childrenLength * scrollSpeed,
+          duration: duration || this.textWidth * scrollSpeed,
           easing: easing,
           isInteraction: isInteraction,
           useNativeDriver: useNativeDriver
@@ -279,7 +243,7 @@ export default class TextMarquee extends PureComponent {
     }, this.hasFinishedFirstLoop ? bounceDelay > 0 ? bounceDelay : 0 : marqueeDelay)
   }
 
-  start = async (timeDelay) => {
+  start = async () => {
     this.setState({ animating: true })
     this.setTimeout(async () => {
       await this.calculateMetrics()
