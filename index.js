@@ -9,6 +9,7 @@ import {
   View,
   findNodeHandle
 } from 'react-native'
+import React, { PureComponent } from 'react'
 
 const { UIManager } = NativeModules
 
