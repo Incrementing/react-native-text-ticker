@@ -7,17 +7,17 @@ import {
   StyleSheet,
   Text,
   View,
-  findNodeHandle
-} from 'react-native'
-import React, { PureComponent } from 'react'
+  findNodeHandle,
+} from "react-native";
+import React, { PureComponent } from "react";
 
-const { UIManager } = NativeModules
+const { UIManager } = NativeModules;
 
 export const TextTickAnimationType = Object.freeze({
-  auto: 'auto',
-  scroll: 'scroll',
-  bounce: 'bounce'
-})
+  auto: "auto",
+  scroll: "scroll",
+  bounce: "bounce",
+});
 
 export default class TextMarquee extends PureComponent {
   static defaultProps = {
@@ -31,43 +31,42 @@ export default class TextMarquee extends PureComponent {
     useNativeDriver: true,
     repeatSpacer: 50,
     easing: Easing.ease,
-    animationType: 'auto',
+    animationType: "auto",
     bounceSpeed: 50,
     scrollSpeed: 150,
     bouncePadding: undefined,
     bounceDelay: 0,
     shouldAnimateTreshold: 0,
     disabled: false,
-    isRTL: undefined
-  }
+    isRTL: undefined,
+  };
 
-  animatedValue = new Animated.Value(0)
-  distance = null
-  textRef = null
-  containerRef = null
+  animatedValue = new Animated.Value(0);
+  distance = null;
+  textRef = null;
+  containerRef = null;
 
   state = {
     animating: false,
     contentFits: true,
     shouldBounce: false,
-    isScrolling: false
-  }
+    isScrolling: false,
+  };
 
   constructor(props) {
     super(props);
-    this.calculateMetricsPromise = null
+    this.calculateMetricsPromise = null;
   }
 
   componentDidMount() {
-    this.invalidateMetrics()
-    const { disabled, marqueeDelay, marqueeOnMount } = this.props
+    this.invalidateMetrics();
+    const { disabled, marqueeDelay, marqueeOnMount } = this.props;
     if (!disabled && marqueeOnMount) {
-      this.startAnimation(marqueeDelay)
+      this.startAnimation(marqueeDelay);
     }
   }
 
   componentDidUpdate(prevProps) {
-
     let childrenChanged = this.props.children !== prevProps.children;
 
     // Handle children not being a string but a loopable object (e.g. array).
@@ -75,7 +74,10 @@ export default class TextMarquee extends PureComponent {
     // make children an array containing ["Hello", <FontAwesomeIcon...].
     //
     // TODO: Add other checks?
-    if (typeof this.props.children == typeof prevProps.children && typeof this.props.children.forEach == "function") {
+    if (
+      typeof this.props.children == typeof prevProps.children &&
+      typeof this.props.children.forEach == "function"
+    ) {
       // By default assume nothing has changed.
       childrenChanged = false;
 
@@ -87,34 +89,39 @@ export default class TextMarquee extends PureComponent {
         }
 
         // Compare length (if .length exists)
-        if (typeof this.props.children[i].length == "number" && this.props.children[i].length != prevProps.children[i].length) {
+        if (
+          typeof this.props.children[i].length == "number" &&
+          this.props.children[i].length != prevProps.children[i].length
+        ) {
           childrenChanged = true;
           break;
         }
 
         // Compare content (if comparison by == is possible).
         // https://developer.mozilla.org/en-US/docs/Glossary/Primitive
-        if (typeof this.props.children[i] != "object" && this.props.children[i] != prevProps.children[i]) {
+        if (
+          typeof this.props.children[i] != "object" &&
+          this.props.children[i] != prevProps.children[i]
+        ) {
           childrenChanged = true;
           break;
         }
       }
     }
 
-
     if (childrenChanged) {
-      this.resetScroll()
+      this.resetScroll();
     } else if (this.props.disabled !== prevProps.disabled) {
       if (!this.props.disabled && this.props.marqueeOnMount) {
-        this.startAnimation(this.props.marqueeDelay)
+        this.startAnimation(this.props.marqueeDelay);
       } else if (this.props.disabled) {
         // Cancel any promises
         if (this.calculateMetricsPromise !== null) {
-          this.calculateMetricsPromise.cancel()
-          this.calculateMetricsPromise = null
+          this.calculateMetricsPromise.cancel();
+          this.calculateMetricsPromise = null;
         }
-        this.stopAnimation()
-        this.clearTimeout()
+        this.stopAnimation();
+        this.clearTimeout();
       }
     }
   }
@@ -122,44 +129,44 @@ export default class TextMarquee extends PureComponent {
   componentWillUnmount() {
     // Cancel promise to stop setState after unmount
     if (this.calculateMetricsPromise !== null) {
-      this.calculateMetricsPromise.cancel()
-      this.calculateMetricsPromise = null
+      this.calculateMetricsPromise.cancel();
+      this.calculateMetricsPromise = null;
     }
-    this.stopAnimation()
+    this.stopAnimation();
     // always stop timers when unmounting, common source of crash
-    this.clearTimeout()
+    this.clearTimeout();
   }
 
   makeCancelable = (promise) => {
-    let cancel = () => { }
+    let cancel = () => {};
     const wrappedPromise = new Promise((resolve, reject) => {
       cancel = () => {
-        resolve = null
-        reject = null
+        resolve = null;
+        reject = null;
       };
       promise.then(
-        value => {
+        (value) => {
           if (resolve) {
-            resolve(value)
+            resolve(value);
           }
         },
-        error => {
+        (error) => {
           if (reject) {
-            reject(error)
+            reject(error);
           }
         }
       );
     });
-    wrappedPromise.cancel = cancel
-    return wrappedPromise
+    wrappedPromise.cancel = cancel;
+    return wrappedPromise;
   };
 
   startAnimation = () => {
     if (this.state.animating) {
-      return
+      return;
     }
-    this.start()
-  }
+    this.start();
+  };
 
   animateScroll = () => {
     const {
@@ -173,15 +180,20 @@ export default class TextMarquee extends PureComponent {
       children,
       scrollSpeed,
       onMarqueeComplete,
-      isRTL
-    } = this.props
+      isRTL,
+    } = this.props;
     this.setTimeout(() => {
-      const scrollToValue = isRTL ?? I18nManager.isRTL ? this.textWidth + repeatSpacer : -this.textWidth - repeatSpacer
+      const scrollToValue =
+        isRTL ?? I18nManager.isRTL
+          ? this.textWidth + repeatSpacer
+          : -this.textWidth - repeatSpacer;
       if (!isNaN(scrollToValue)) {
-
         let childrenLength = children.length;
-        if (typeof children != "string" && typeof children.forEach == "function") {
-          children.forEach(child => {
+        if (
+          typeof children != "string" &&
+          typeof children.forEach == "function"
+        ) {
+          children.forEach((child) => {
             if (!isNaN(child.length)) {
               childrenLength += child.length;
             }
@@ -193,171 +205,210 @@ export default class TextMarquee extends PureComponent {
           duration: duration || childrenLength * scrollSpeed,
           easing: easing,
           isInteraction: isInteraction,
-          useNativeDriver: useNativeDriver
+          useNativeDriver: useNativeDriver,
         }).start(({ finished }) => {
           if (finished) {
             if (onMarqueeComplete) {
-              onMarqueeComplete()
+              onMarqueeComplete();
             }
             if (loop) {
-              this.animatedValue.setValue(0)
-              this.animateScroll()
+              this.animatedValue.setValue(0);
+              this.animateScroll();
             }
           }
-        })
+        });
       } else {
-        this.start()
+        this.start();
       }
-    }, marqueeDelay)
-  }
+    }, marqueeDelay);
+  };
 
   animateBounce = () => {
-    const { duration, marqueeDelay, loop, isInteraction, useNativeDriver, easing, bounceSpeed, bouncePadding, bounceDelay, isRTL } = this.props
+    const {
+      duration,
+      marqueeDelay,
+      loop,
+      isInteraction,
+      useNativeDriver,
+      easing,
+      bounceSpeed,
+      bouncePadding,
+      bounceDelay,
+      isRTL,
+    } = this.props;
     const rtl = isRTL ?? I18nManager.isRTL;
     const bounceEndPadding = rtl ? bouncePadding?.left : bouncePadding?.right;
     const bounceStartPadding = rtl ? bouncePadding?.right : bouncePadding?.left;
-    this.setTimeout(() => {
-      Animated.sequence([
-        Animated.timing(this.animatedValue, {
-          toValue: rtl ? this.distance + (bounceEndPadding ?? 10) : -this.distance - (bounceEndPadding ?? 10),
-          duration: duration || (this.distance) * bounceSpeed,
-          easing: easing,
-          isInteraction: isInteraction,
-          useNativeDriver: useNativeDriver
-        }),
-        Animated.timing(this.animatedValue, {
-          toValue: rtl ? -(bounceStartPadding ?? 10) : bounceStartPadding ?? 10,
-          duration: duration || (this.distance) * bounceSpeed,
-          easing: easing,
-          isInteraction: isInteraction,
-          useNativeDriver: useNativeDriver,
-          delay: bounceDelay
-        })
-      ]).start(({ finished }) => {
-        if (finished) {
-          this.hasFinishedFirstLoop = true
-        }
-        if (loop) {
-          this.animateBounce()
-        }
-      })
-    }, this.hasFinishedFirstLoop ? bounceDelay > 0 ? bounceDelay : 0 : marqueeDelay)
-  }
+    this.setTimeout(
+      () => {
+        Animated.sequence([
+          Animated.timing(this.animatedValue, {
+            toValue: rtl
+              ? this.distance + (bounceEndPadding ?? 10)
+              : -this.distance - (bounceEndPadding ?? 10),
+            duration: duration || this.distance * bounceSpeed,
+            easing: easing,
+            isInteraction: isInteraction,
+            useNativeDriver: useNativeDriver,
+          }),
+          Animated.timing(this.animatedValue, {
+            toValue: rtl
+              ? -(bounceStartPadding ?? 10)
+              : bounceStartPadding ?? 10,
+            duration: duration || this.distance * bounceSpeed,
+            easing: easing,
+            isInteraction: isInteraction,
+            useNativeDriver: useNativeDriver,
+            delay: bounceDelay,
+          }),
+        ]).start(({ finished }) => {
+          if (finished) {
+            this.hasFinishedFirstLoop = true;
+          }
+          if (loop) {
+            this.animateBounce();
+          }
+        });
+      },
+      this.hasFinishedFirstLoop
+        ? bounceDelay > 0
+          ? bounceDelay
+          : 0
+        : marqueeDelay
+    );
+  };
 
   start = async () => {
-    this.setState({ animating: true })
+    this.setState({ animating: true });
     this.setTimeout(async () => {
-      await this.calculateMetrics()
+      await this.calculateMetrics();
       if (!this.state.contentFits) {
-        const { onScrollStart } = this.props
+        const { onScrollStart } = this.props;
         if (onScrollStart && typeof onScrollStart === "function") {
-          onScrollStart()
+          onScrollStart();
         }
-        if (this.props.animationType === 'auto') {
+        if (this.props.animationType === "auto") {
           if (this.state.shouldBounce && this.props.bounce) {
-            this.animateBounce()
+            this.animateBounce();
           } else {
-            this.animateScroll()
+            this.animateScroll();
           }
-        } else if (this.props.animationType === 'bounce') {
-          this.animateBounce()
-        } else if (this.props.animationType === 'scroll') {
-          this.animateScroll()
+        } else if (this.props.animationType === "bounce") {
+          this.animateBounce();
+        } else if (this.props.animationType === "scroll") {
+          this.animateScroll();
         }
       }
-    }, 100)
-  }
+    }, 100);
+  };
 
   stopAnimation() {
-    this.animatedValue.setValue(0)
-    this.setState({ animating: false, shouldBounce: false })
+    this.animatedValue.setValue(0);
+    this.setState({ animating: false, shouldBounce: false });
   }
 
   async calculateMetrics() {
-    const { shouldAnimateTreshold } = this.props
-    this.calculateMetricsPromise = this.makeCancelable(new Promise(async (resolve, reject) => {
-      try {
-        const measureWidth = node =>
-          new Promise(async (resolve, reject) => {
-            // nodehandle is not always there, causes crash. modified to check..
-            const nodeHandle = findNodeHandle(node);
-            if (nodeHandle) {
-              UIManager.measure(nodeHandle, (x, y, w) => {
-                // console.log('Width: ' + w)
-                return resolve(w)
-              })
-            } else {
-              return reject('nodehandle_not_found');
-            }
+    const { shouldAnimateTreshold } = this.props;
+    this.calculateMetricsPromise = this.makeCancelable(
+      new Promise(async (resolve, reject) => {
+        try {
+          const measureWidth = (node) =>
+            new Promise(async (resolve, reject) => {
+              // nodehandle is not always there, causes crash. modified to check..
+              const nodeHandle = findNodeHandle(node);
+              if (nodeHandle) {
+                UIManager.measure(nodeHandle, (x, y, w) => {
+                  // console.log('Width: ' + w)
+                  return resolve(w);
+                });
+              } else {
+                return reject("nodehandle_not_found");
+              }
+            });
+          const [containerWidth, textWidth] = await Promise.all([
+            measureWidth(this.containerRef),
+            measureWidth(this.textRef),
+          ]);
+
+          this.containerWidth = containerWidth;
+          this.textWidth = textWidth;
+          this.distance = textWidth - containerWidth + shouldAnimateTreshold;
+
+          // console.log(`distance: ${this.distance}, contentFits: ${this.state.contentFits}`)
+          resolve({
+            // Is 1 instead of 0 to get round rounding errors from:
+            // https://github.com/facebook/react-native/commit/a534672
+            contentFits: this.distance <= 1,
+            shouldBounce: this.distance < this.containerWidth / 8,
           });
-        const [containerWidth, textWidth] = await Promise.all([
-          measureWidth(this.containerRef),
-          measureWidth(this.textRef)
-        ]);
-
-        this.containerWidth = containerWidth
-        this.textWidth = textWidth
-        this.distance = textWidth - containerWidth + shouldAnimateTreshold
-
-        // console.log(`distance: ${this.distance}, contentFits: ${this.state.contentFits}`)
-        resolve({
-          // Is 1 instead of 0 to get round rounding errors from:
-          // https://github.com/facebook/react-native/commit/a534672
-          contentFits: this.distance <= 1,
-          shouldBounce: this.distance < this.containerWidth / 8
-        })
-      } catch (error) {
-        console.warn('react-native-text-ticker: could not calculate metrics', error);
-      }
-    }))
+        } catch (error) {
+          console.warn(
+            "react-native-text-ticker: could not calculate metrics",
+            error
+          );
+        }
+      })
+    );
     await this.calculateMetricsPromise.then((result) => {
       this.setState({
         contentFits: result.contentFits,
         shouldBounce: result.shouldBounce,
-      })
-      return []
-    })
+      });
+      return [];
+    });
   }
 
   invalidateMetrics = () => {
-    this.distance = null
-    this.setState({ contentFits: true })
-  }
+    this.distance = null;
+    this.setState({ contentFits: true });
+  };
 
   clearTimeout() {
     if (this.timer) {
-      clearTimeout(this.timer)
-      this.timer = null
+      clearTimeout(this.timer);
+      this.timer = null;
     }
   }
 
   setTimeout(fn, time = 0) {
-    this.clearTimeout()
-    this.timer = setTimeout(fn, time)
+    this.clearTimeout();
+    this.timer = setTimeout(fn, time);
   }
 
   scrollBegin = () => {
-    this.setState({ isScrolling: true })
-    this.animatedValue.setValue(0)
-  }
+    this.setState({ isScrolling: true });
+    this.animatedValue.setValue(0);
+  };
 
   scrollEnd = () => {
-    const { marqueeDelay } = this.props
+    const { marqueeDelay } = this.props;
 
-    this.setTimeout(() => {
-      this.setState({ isScrolling: false })
-      this.start()
-    }, marqueeDelay >= 0 ? marqueeDelay : 3000)
-  }
+    this.setTimeout(
+      () => {
+        this.setState({ isScrolling: false });
+        this.start();
+      },
+      marqueeDelay >= 0 ? marqueeDelay : 3000
+    );
+  };
 
   resetScroll = () => {
-    this.scrollBegin()
-    this.scrollEnd()
-  }
+    this.scrollBegin();
+    this.scrollEnd();
+  };
 
   render() {
-    const { style, children, repeatSpacer, scroll, shouldAnimateTreshold, disabled, isRTL, ...props } = this.props
-    const { animating, contentFits, isScrolling } = this.state
+    const {
+      style,
+      children,
+      repeatSpacer,
+      scroll,
+      shouldAnimateTreshold,
+      disabled,
+      isRTL,
+      ...props
+    } = this.props;
+    const { animating, contentFits, isScrolling } = this.state;
     const additionalContainerStyle = {
       // This is useful for shouldAnimateTreshold only:
       // we use flex: 1 to make the container take all the width available
@@ -365,59 +416,72 @@ export default class TextMarquee extends PureComponent {
       // the container would have the width of the children (the text)
       // In this case, it would be impossible to determine if animating is necessary based on the width of the container
       // (contentFits in calculateMetrics() would always be true)
-      flex: shouldAnimateTreshold ? 1 : undefined
-    }
+      flex: shouldAnimateTreshold ? 1 : undefined,
+    };
     const animatedText = disabled ? null : (
       <ScrollView
-        ref={c => (this.containerRef = c)}
+        ref={(c) => (this.containerRef = c)}
         horizontal
         scrollEnabled={scroll ? !this.state.contentFits : false}
         scrollEventThrottle={16}
         onScrollBeginDrag={this.scrollBegin}
         onScrollEndDrag={this.scrollEnd}
         showsHorizontalScrollIndicator={false}
-        style={[StyleSheet.absoluteFillObject, (isRTL ?? I18nManager.isRTL) && { flexDirection: 'row-reverse' }]}
-        display={animating ? 'flex' : 'none'}
-        onContentSizeChange={() => this.calculateMetrics()}
-      >
+        style={[
+          StyleSheet.absoluteFillObject,
+          (isRTL ?? I18nManager.isRTL) && { flexDirection: "row-reverse" },
+        ]}
+        display={animating ? "flex" : "none"}
+        onContentSizeChange={() => this.calculateMetrics()}>
         <Animated.Text
-          ref={c => (this.textRef = c)}
+          ref={(c) => (this.textRef = c)}
           numberOfLines={1}
           {...props}
-          style={[style, { transform: [{ translateX: this.animatedValue }], width: null }]}
-        >
+          style={[
+            style,
+            { transform: [{ translateX: this.animatedValue }], width: null },
+          ]}>
           {this.props.children}
         </Animated.Text>
-        {!contentFits && !isScrolling
-          ? <View style={{ paddingLeft: repeatSpacer }}>
+        {!contentFits && !isScrolling ? (
+          <View style={{ paddingLeft: repeatSpacer }}>
             <Animated.Text
               numberOfLines={1}
               {...props}
-              style={[style, { transform: [{ translateX: this.animatedValue }], width: null }]}
-            >
+              style={[
+                style,
+                {
+                  transform: [{ translateX: this.animatedValue }],
+                  width: null,
+                },
+              ]}>
               {this.props.children}
             </Animated.Text>
-          </View> : null}
+          </View>
+        ) : null}
       </ScrollView>
     );
     return (
-      <View style={[styles.container, additionalContainerStyle]}>
+      <View
+        style={[
+          styles.container,
+          additionalContainerStyle,
+          { width: contentFits ? null : "90%" },
+        ]}>
         <Text
           {...props}
           numberOfLines={1}
-          style={[style, { opacity: !disabled && animating ? 0 : 1 }]}
-        >
+          style={[style, { opacity: !disabled && animating ? 0 : 1 }]}>
           {this.props.children}
         </Text>
         {animatedText}
       </View>
-    )
+    );
   }
-
 }
 
 const styles = StyleSheet.create({
   container: {
-    overflow: 'hidden'
-  }
-})
+    overflow: "hidden",
+  },
+});
